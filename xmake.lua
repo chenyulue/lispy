@@ -1,10 +1,16 @@
 add_rules("mode.debug", "mode.release")
 add_cflags("-std=c99", "-Wall")
+add_includedirs("include")
 add_requires("pacman::wineditline", {alias="editline"})
+
+target("mpcer")
+    set_kind("static")
+    add_files("lib/mpc/*.c")
 
 target("lispy")
     set_kind("binary")
     add_files("src/*.c")
+    add_deps("mpcer")
     add_packages("editline")
 
 --

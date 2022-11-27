@@ -1,6 +1,11 @@
 [
 {
   "directory": "c:\\Users\\xj\\cpp\\lispy",
-  "arguments": ["C:\\msys2\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe", "-c", "-m64", "-g", "-O0", "-std=c99", "-Wall", "-o", "build\\.objs\\lispy\\mingw\\x86_64\\debug\\src\\main.c.obj", "src\\main.c"],
+  "arguments": ["C:\\msys2\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe", "-c", "-m64", "-g", "-O0", "-Iinclude", "-I", "C:\\Users\\xj\\AppData\\Local\\Programs\\stack\\x86_64-windows\\msys2-20200903\\mingw64\\bin\\..\\include\\editline", "-std=c99", "-Wall", "-o", "build\\.objs\\lispy\\mingw\\x86_64\\debug\\src\\main.c.obj", "src\\main.c"],
   "file": "src\\main.c"
+},
+{
+  "directory": "c:\\Users\\xj\\cpp\\lispy",
+  "arguments": ["C:\\msys2\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe", "-c", "-m64", "-g", "-O0", "-Iinclude", "-std=c99", "-Wall", "-o", "build\\.objs\\mpcer\\mingw\\x86_64\\debug\\lib\\mpc\\mpc.c.obj", "lib\\mpc\\mpc.c"],
+  "file": "lib\\mpc\\mpc.c"
 }]
