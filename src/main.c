@@ -5,6 +5,7 @@
 #include <readline.h>
 
 #include "mpc.h"
+#include "eval.h"
 
 static void run(char const *input, mpc_parser_t *parser);
 
@@ -61,7 +62,8 @@ static void run(char const *input, mpc_parser_t *parser)
     if (mpc_parse("<stdin>", input, parser, &r))
     {
         /* On Success Print the AST. */
-        mpc_ast_print(r.output);
+        long result = eval(r.output);
+        printf("%li\n", result);
         mpc_ast_delete(r.output);
     }
     else
