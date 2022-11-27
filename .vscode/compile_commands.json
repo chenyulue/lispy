@@ -1,0 +1,6 @@
+[
+{
+  "directory": "c:\\Users\\xj\\cpp\\lispy",
+  "arguments": ["clang.exe", "-c", "-Qunused-arguments", "-m64", "-fexceptions", "-fcxx-exceptions", "-std=c99", "-Wall", "-o", "build\\.objs\\lispy\\windows\\x64\\src\\main.c.obj", "src\\main.c"],
+  "file": "src\\main.c"
+}]
