@@ -1,6 +1,6 @@
 [
 {
   "directory": "c:\\Users\\xj\\cpp\\lispy",
-  "arguments": ["clang.exe", "-c", "-Qunused-arguments", "-m64", "-fexceptions", "-fcxx-exceptions", "-std=c99", "-Wall", "-o", "build\\.objs\\lispy\\windows\\x64\\src\\main.c.obj", "src\\main.c"],
+  "arguments": ["C:\\msys2\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe", "-c", "-m64", "-g", "-O0", "-std=c99", "-Wall", "-o", "build\\.objs\\lispy\\mingw\\x86_64\\debug\\src\\main.c.obj", "src\\main.c"],
   "file": "src\\main.c"
 }]

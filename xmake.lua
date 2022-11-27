@@ -1,9 +1,11 @@
 add_rules("mode.debug", "mode.release")
 add_cflags("-std=c99", "-Wall")
+add_requires("pacman::wineditline", {alias="editline"})
 
 target("lispy")
     set_kind("binary")
     add_files("src/*.c")
+    add_packages("editline")
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
