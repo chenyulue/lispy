@@ -13,17 +13,19 @@ int main(int argc, char **argv)
 {
     /* Create parsers */
     mpc_parser_t *Number = mpc_new("number");
-    mpc_parser_t *Operator = mpc_new("operator");
+    mpc_parser_t *Symbol = mpc_new("symbol");
+    mpc_parser_t *Sexpr = mpc_new("sexpr");
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
     /* Define parsers with the following DSL. */
     mpca_lang(MPCA_LANG_DEFAULT,
         "number: /-?[0-9]+/;"
-        "operator: '+' | '-' | '*' | '/';"
-        "expr: <number> | '(' <operator> <expr>+ ')';"
-        "lispy: /^/ <operator> <expr>+ /$/;",
-        Number, Operator, Expr, Lispy
+        "symbol: '+' | '-' | '*' | '/';"
+        "sexpr: '(' <expr>* ')';"
+        "expr: <number> | <symbol> | <sexpr>;"
+        "lispy: /^/ <expr>* /$/;",
+        Number, Symbol, Sexpr, Expr, Lispy
         );
 
     /* Print Version and Exit Information */
@@ -51,7 +53,7 @@ int main(int argc, char **argv)
     }
 
     /* Undefine and delete our parsers. */
-    mpc_cleanup(4, Number, Operator, Expr, Lispy);
+    mpc_cleanup(5, Number, Symbol, Sexpr, Expr, Lispy);
 
     return EXIT_SUCCESS;
 }
@@ -62,8 +64,9 @@ static void run(char const *input, mpc_parser_t *parser)
     if (mpc_parse("<stdin>", input, parser, &r))
     {
         /* On Success Print the AST. */
-        lval result = eval(r.output);
+        lval *result = lval_eval(lval_read(r.output));
         lval_println(result);
+        lval_del(result);
         mpc_ast_delete(r.output);
     }
     else

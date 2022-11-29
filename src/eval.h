@@ -9,39 +9,64 @@
 
 /* Crate Enumeration of possible lval types. */
 enum lval_type {
-    LVAL_NUM,
     LVAL_ERR,
-};
-
-/* Create enumeration of possible error types. */
-enum lval_err {
-    LERR_DIV_ZERO,
-    LERR_BAD_OP,
-    LERR_BAD_NUM,
+    LVAL_NUM,
+    LVAL_SYM,
+    LVAL_SEXPR,
 };
 
 /* Declare new lval struct, which uses a nested union in the struct to 
     represent the evaluated result.
 */
-typedef struct {
+typedef struct lval {
     enum lval_type type;
     union {
         long num;
-        enum lval_err err;
+
+        /* Use string characters to store the error info and symbols. */
+        char *err;
+        char *sym;
+
+        /* Count and pointer to a list of lval*/
+        struct {
+            int count;
+            struct lval **cell;
+        };
     };
 } lval;
 
-lval eval(mpc_ast_t *t);
-lval eval_op(lval x, char *op, lval y);
 
-/* Create a new number type lval */
-lval lval_num(long x);
-/* Create a new error type lval */
-lval lval_err(enum lval_err err);
+/* Evaluate the AST */
+lval *lval_eval_sexpr(lval *v);
+lval *lval_eval(lval *v);
+lval* lval_pop(lval* v, int i);
+lval* lval_take(lval* v, int i);
+lval* builtin_op(lval* a, char* op);
 
+
+/* Create a pointer to a new Number lval */
+lval *lval_num(long x);
+/* Create a pointer to a new Error lval  */
+lval *lval_err(char *err);
+/* Create a pointer to a new Symbol lval*/
+lval *lval_sym(char *sym);
+/* Create a pointer to a new S-expression lval */
+lval *lval_sexpr(void);
+/* Delete a lval to free the memory. */
+void lval_del(lval *v);
+
+
+/* Read the input and contruct the lval. */
+lval *lval_read_num(mpc_ast_t *t);
+lval *lval_read(mpc_ast_t *t);
+lval *lval_add(lval *v, lval *x);
+
+
+/* Print the expression*/
+void lval_expr_print(lval *v, char open, char close);
 /* Print an lval value. */
-void lval_print(lval v);
+void lval_print(lval *v);
 /* Print an lval value followed by a newline. */
-void lval_println(lval v);
+void lval_println(lval *v);
 
 #endif
