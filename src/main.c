@@ -7,7 +7,7 @@
 #include "mpc.h"
 #include "eval.h"
 
-static void run(char const *input, mpc_parser_t *parser);
+static void run(lenv *e, char const *input, mpc_parser_t *parser);
 
 int main(int argc, char **argv)
 {
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     /* Define parsers with the following DSL. */
     mpca_lang(MPCA_LANG_DEFAULT,
         "number: /-?[0-9]+/;"
-        "symbol: '+' | '-' | '*' | '/' | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\";"
+        "symbol: /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;"
         "sexpr: '(' <expr>* ')';"
         "qexpr: '{' <expr>* '}';"
         "expr: <number> | <symbol> | <sexpr> | <qexpr>;"
@@ -34,6 +34,9 @@ int main(int argc, char **argv)
     char const welcome_info[] = ("Lispy Version 0.0.1 (C) Copyright 2022, Chenyu Lue\n"
                                  "Press Ctrl + C or :q to Exit\n");
     puts(welcome_info);
+
+    lenv *e = lenv_new();
+    lenv_add_builtins(e);
 
     /* In a forever looping */
     while (1)
@@ -48,11 +51,14 @@ int main(int argc, char **argv)
             break;
 
         /* Attemp to Parse and run the user input. */
-        run(input, Lispy);
+        run(e, input, Lispy);
 
         /* Free retrieved input */
         free(input);
     }
+
+    /* Delete the environment. */
+    lenv_del(e);
 
     /* Undefine and delete our parsers. */
     mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
@@ -60,13 +66,13 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-static void run(char const *input, mpc_parser_t *parser)
+static void run(lenv *e, char const *input, mpc_parser_t *parser)
 {
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, parser, &r))
     {
         /* On Success Print the AST. */
-        lval *result = lval_eval(lval_read(r.output));
+        lval *result = lval_eval(e, lval_read(r.output));
         lval_println(result);
         lval_del(result);
         mpc_ast_delete(r.output);
