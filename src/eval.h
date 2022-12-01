@@ -6,14 +6,15 @@
 
 #define STR_EQ(X, Y) (strcmp((X), (Y)) == 0)
 #define STR_CONTAIN(X, Y) strstr((X), (Y))
-#define LASSERT(args, cond, err)  \
-    do                            \
-    {                             \
-        if (!(cond))              \
-        {                         \
-            lval_del(args);       \
-            return lval_err(err); \
-        }                         \
+#define LASSERT(args, cond, fmt, ...)                 \
+    do                                                \
+    {                                                 \
+        if (!(cond))                                  \
+        {                                             \
+            lval *err = lval_err(fmt, ##__VA_ARGS__); \
+            lval_del(args);                           \
+            return err;                               \
+        }                                             \
     } while (0)
 
 /* Forward Declarations */
@@ -33,7 +34,7 @@ enum lval_type
     LVAL_QEXPR,
 };
 
-typedef lval *(*lbuiltin)(lenv*, lval*);
+typedef lval *(*lbuiltin)(lenv *, lval *);
 
 /* Declare new lval struct, which uses a nested union in the struct to
     represent the evaluated result.
@@ -80,6 +81,9 @@ lenv *lenv_new(void);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
+char *lenv_find_fun(lenv *e, lbuiltin fun);
+/* Print out all the named values in an environment. */
+void builtin_print_env(lenv *e);
 
 /************ Evaluate the AST ******************/
 lval *lval_eval_sexpr(lenv *e, lval *v);
@@ -98,6 +102,7 @@ lval *builtin_add(lenv *e, lval *a);
 lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
+lval *builtin_def(lenv *e, lval *a);
 void lenv_add_builtin(lenv *e, char *name, lbuiltin fun);
 void lenv_add_builtins(lenv *e);
 
@@ -105,7 +110,7 @@ void lenv_add_builtins(lenv *e);
 /* Create a pointer to a new Number lval */
 lval *lval_num(long x);
 /* Create a pointer to a new Error lval  */
-lval *lval_err(char *err);
+lval *lval_err(char *fmt, ...);
 /* Create a pointer to a new Symbol lval*/
 lval *lval_sym(char *sym);
 /* Create a pointer to a new S-expression lval */
@@ -124,10 +129,15 @@ lval *lval_add(lval *v, lval *x);
 lval *lval_copy(lval *v);
 
 /* Print the expression*/
-void lval_expr_print(lval *v, char open, char close);
+void lval_expr_print(lenv *e, lval *v, char open, char close);
 /* Print an lval value. */
-void lval_print(lval *v);
+void lval_print(lenv *e, lval *v);
 /* Print an lval value followed by a newline. */
-void lval_println(lval *v);
+void lval_println(lenv *e, lval *v);
+
+/*********** Utilities *******************/
+char *ltype_name(enum lval_type t);
+
+void lispy_exit(int *flag);
 
 #endif

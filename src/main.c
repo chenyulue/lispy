@@ -7,7 +7,7 @@
 #include "mpc.h"
 #include "eval.h"
 
-static void run(lenv *e, char const *input, mpc_parser_t *parser);
+static void run(lenv *e, char const *input, mpc_parser_t *parser, int *flag);
 
 int main(int argc, char **argv)
 {
@@ -21,25 +21,25 @@ int main(int argc, char **argv)
 
     /* Define parsers with the following DSL. */
     mpca_lang(MPCA_LANG_DEFAULT,
-        "number: /-?[0-9]+/;"
-        "symbol: /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;"
-        "sexpr: '(' <expr>* ')';"
-        "qexpr: '{' <expr>* '}';"
-        "expr: <number> | <symbol> | <sexpr> | <qexpr>;"
-        "lispy: /^/ <expr>* /$/;",
-        Number, Symbol, Sexpr, Qexpr, Expr, Lispy
-        );
+              "number: /-?[0-9]+/;"
+              "symbol: /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;"
+              "sexpr: '(' <expr>* ')';"
+              "qexpr: '{' <expr>* '}';"
+              "expr: <number> | <symbol> | <sexpr> | <qexpr>;"
+              "lispy: /^/ <expr>* /$/;",
+              Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
     /* Print Version and Exit Information */
     char const welcome_info[] = ("Lispy Version 0.0.1 (C) Copyright 2022, Chenyu Lue\n"
-                                 "Press Ctrl + C or :q to Exit\n");
+                                 "Press Ctrl + C or type 'exit' to Exit\n");
     puts(welcome_info);
 
     lenv *e = lenv_new();
     lenv_add_builtins(e);
 
     /* In a forever looping */
-    while (1)
+    int flag = 1;
+    while (flag)
     {
         /* Output the prompt and get input */
         char *input = readline("lispy> ");
@@ -47,11 +47,8 @@ int main(int argc, char **argv)
         /* Add input to history */
         add_history(input);
 
-        if (!strcmp(input, ":q"))
-            break;
-
         /* Attemp to Parse and run the user input. */
-        run(e, input, Lispy);
+        run(e, input, Lispy, &flag);
 
         /* Free retrieved input */
         free(input);
@@ -66,14 +63,19 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-static void run(lenv *e, char const *input, mpc_parser_t *parser)
+static void run(lenv *e, char const *input, mpc_parser_t *parser, int *flag)
 {
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, parser, &r))
     {
         /* On Success Print the AST. */
         lval *result = lval_eval(e, lval_read(r.output));
-        lval_println(result);
+        if (result->type == LVAL_FUN && result->fun == builtin_print_env)
+            builtin_print_env(e);
+        else if (result->type == LVAL_FUN && result->fun == lispy_exit)
+            lispy_exit(flag);
+        else
+            lval_println(e, result);
         lval_del(result);
         mpc_ast_delete(r.output);
     }
