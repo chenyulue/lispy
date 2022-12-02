@@ -44,14 +44,22 @@ struct lval
     enum lval_type type;
     union
     {
+        /* Basic types. */
         long num;
 
         /* Use string characters to store the error info and symbols. */
         char *err;
         char *sym;
 
-        /* The builtin function pointer */
-        lbuiltin fun;
+        /* Functions */
+        struct 
+        {
+            lbuiltin builtin;
+            lenv *env;
+            lval *formals;
+            lval *body;
+        };
+        
 
         /* Count and pointer to a list of lval*/
         struct
@@ -72,6 +80,7 @@ struct env_map
 };
 struct lenv
 {
+    lenv *par;
     int count;
     struct env_map *dicts;
 };
@@ -81,6 +90,8 @@ lenv *lenv_new(void);
 void lenv_del(lenv *e);
 lval *lenv_get(lenv *e, lval *k);
 void lenv_put(lenv *e, lval *k, lval *v);
+lenv *lenv_copy(lenv *e);
+void lenv_def(lenv *e, lval *k, lval *v);
 char *lenv_find_fun(lenv *e, lbuiltin fun);
 /* Print out all the named values in an environment. */
 void builtin_print_env(lenv *e);
@@ -103,6 +114,9 @@ lval *builtin_sub(lenv *e, lval *a);
 lval *builtin_mul(lenv *e, lval *a);
 lval *builtin_div(lenv *e, lval *a);
 lval *builtin_def(lenv *e, lval *a);
+lval *builtin_put(lenv *e, lval *a);
+lval *builtin_var(lenv *e, lval *a, char *func);
+lval *builtin_lambda(lenv *e, lval *a);
 void lenv_add_builtin(lenv *e, char *name, lbuiltin fun);
 void lenv_add_builtins(lenv *e);
 
@@ -119,6 +133,10 @@ lval *lval_sexpr(void);
 lval *lval_qexpr(void);
 /* Create a pointer to a list function */
 lval *lval_fun(lbuiltin func);
+/* Create a user defined function. */
+lval *lval_lambda(lval *formals, lval *body);
+/* Call a function */
+lval *lval_call(lenv *e, lval *f, lval *a);
 /* Delete a lval to free the memory. */
 void lval_del(lval *v);
 

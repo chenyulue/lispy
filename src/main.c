@@ -70,9 +70,9 @@ static void run(lenv *e, char const *input, mpc_parser_t *parser, int *flag)
     {
         /* On Success Print the AST. */
         lval *result = lval_eval(e, lval_read(r.output));
-        if (result->type == LVAL_FUN && result->fun == builtin_print_env)
+        if (result->type == LVAL_FUN && result->builtin == builtin_print_env)
             builtin_print_env(e);
-        else if (result->type == LVAL_FUN && result->fun == lispy_exit)
+        else if (result->type == LVAL_FUN && result->builtin == lispy_exit)
             lispy_exit(flag);
         else
             lval_println(e, result);
