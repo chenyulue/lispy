@@ -152,14 +152,15 @@ lval *lval_eval_sexpr(lenv *e, lval *v)
     lval *f = lval_pop(v, 0);
     if (f->type != LVAL_FUN)
     {
+        lval *err = lval_err("S-Expression starts with incorrect type."
+            "Got %s, Expected %s.", ltype_name(f->type), ltype_name(LVAL_FUN));
         lval_del(f);
         lval_del(v);
-        return lval_err("First element got %s, expected %s.",
-                        ltype_name(f->type), ltype_name(LVAL_FUN));
+        return err;
     }
 
     /* If so call function to get result. */
-    lval *result = f->builtin(e, v);
+    lval *result = lval_call(e, f, v);
     lval_del(f);
     return result;
 }
@@ -457,6 +458,18 @@ lval *builtin_lambda(lenv *e, lval *a)
     return lval_lambda(formals, body);
 }
 
+lval *builtin_fun(lenv *e, lval *a)
+{
+    LASSERT(a, a->count == 2, "Function 'fun' passed too many arguments. "
+        "Got %d, Expected %d.", a->count, 2);
+    
+    lval *decl = lval_pop(a, 0);
+    lval *fun_name = lval_pop(decl, 0);
+    lval *lambda = lval_lambda(decl, a);
+    lenv_def(e, fun_name, lambda);
+    return lval_sexpr();
+}
+
 void lenv_add_builtin(lenv *e, char *name, lbuiltin func)
 {
     lval *k = lval_sym(name);
@@ -495,6 +508,8 @@ void lenv_add_builtins(lenv *e)
 
     lenv_add_builtin(e, "def", builtin_def);
     lenv_add_builtin(e, "=", builtin_put);
+
+    lenv_add_builtin(e, "fun", builtin_fun);
 }
 
 /********** Construct new lvals ****************/
@@ -593,14 +608,94 @@ lval *lval_lambda(lval *formals, lval *body)
 lval *lval_call(lenv *e, lval *f, lval *a)
 {
     /* If Builtin then simply apply that */
-    if (f->bultin) { return f->builtin(e, a); }
+    if (f->builtin) { return f->builtin(e, a); }
 
     /* Record Argument Counts */
     int given = a->count;
     int total = f->formals->count;
 
     /* While arguments still remain to be processed */
-    
+    while (a->count)
+    {
+        /* If we've ran out of formal arguments to bind.*/
+        if (f->formals->count == 0)
+        {
+            lval_del(a);
+            return lval_err("Function passed too many arguments. "
+                "Got %d, Expected %d.", given, total);
+        }
+
+        /* Pop the first symbol from the formals */
+        lval *sym = lval_pop(f->formals, 0);
+
+        /* Special case to deal with '&' */
+        if (STR_EQ(sym->sym, "&"))
+        {
+            /* Ensure '&' is followed by another symbol */
+            if (f->formals->count != 1)
+            {
+                lval_del(a);
+                return lval_err("Function format invalid. Symbol '&' not followed by single symbol.");
+            }
+
+            /* Next formal should be bound to remaining arguments */
+            lval *nsym = lval_pop(f->formals, 0);
+            lenv_put(f->env, nsym, builtin_list(e, a));
+            lval_del(sym);
+            lval_del(nsym);
+            break;
+        }
+
+        /* Pop the next argument from the list */
+        lval *val = lval_pop(a, 0);
+
+        /* Bind a copy into the function's environment */
+        lenv_put(f->env, sym, val);
+
+        /* Delete symbol and value */
+        lval_del(sym);
+        lval_del(val);
+    }
+
+    /* Argument list is now bound so can be cleaned up */
+    lval_del(a);
+
+    /* If '&' remains in formal list, bind to empty list */
+    if (f->formals->count > 0 && STR_EQ(f->formals->cell[0]->sym, "&"))
+    {
+        /* Check to ensure that & is not passed invalidly. */
+        if (f->formals->count != 2)
+        {
+            return lval_err("function format invalid. Symbol '&' not followed by single symbol.");
+        }
+
+        /* Pop and delete '&' symbol */
+        lval_del(lval_pop(f->formals, 0));
+
+        /* Pop next symbol and create empty list */
+        lval *sym = lval_pop(f->formals, 0);
+        lval *val = lval_qexpr();
+
+        /* Bind to environment and delete */
+        lenv_put(f->env, sym, val);
+        lval_del(sym);
+        lval_del(val);
+    }
+
+    /* If all formals have been bound evaluate it */
+    if (f->formals->count == 0)
+    {
+        /* Set environment parent to evaluation environment */
+        f->env->par = e;
+
+        /* Evaluate and return the result */
+        return builtin_eval(f->env, lval_add(lval_qexpr(), lval_copy(f->body)));
+    }
+    else
+    {
+        /* Otherwise return partially evaluated function */
+        return lval_copy(f);
+    }
 }
 
 /* Delete a lval to free the memory. */
