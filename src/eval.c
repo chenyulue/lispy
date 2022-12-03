@@ -470,6 +470,140 @@ lval *builtin_fun(lenv *e, lval *a)
     return lval_sexpr();
 }
 
+lval *builtin_gt(lenv *e, lval *a)
+{
+    return builtin_ord(e, a, ">");
+}
+
+lval *builtin_lt(lenv *e, lval *a)
+{
+    return builtin_ord(e, a, "<");
+}
+
+lval *builtin_ge(lenv *e, lval *a)
+{
+    return builtin_ord(e, a, ">=");
+}
+
+lval *builtin_le(lenv *e, lval *a)
+{
+    return builtin_ord(e, a, "<=");
+}
+
+lval *builtin_ord(lenv *e, lval *a, char *op)
+{
+    LASSERT(a, a->count == 2, "Operator %s passed too many arguments. "
+        "Got %d, Expected %d.", op, a->count, 2);
+    LASSERT(a, a->cell[0]->type == LVAL_NUM, "Operator %s passed invalid type at pos %d. "
+        "Got %d, Expected %d.", op, 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
+    LASSERT(a, a->cell[1]->type == LVAL_NUM, "Operator %s passed invalid type at pos %d. "
+        "Got %d, Expected %d.", op, 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_NUM));
+
+    int r;
+    if (STR_EQ(op, ">")) r = a->cell[0]->num > a->cell[1]->num;
+    if (STR_EQ(op, "<")) r = a->cell[0]->num < a->cell[1]->num;
+    if (STR_EQ(op, ">=")) r = a->cell[0]->num >= a->cell[1]->num;
+    if (STR_EQ(op, "<=")) r = a->cell[0]->num <= a->cell[1]->num;
+
+    lval_del(a);
+    return lval_num(r);
+}
+
+int lval_eq(lval *x, lval *y)
+{
+    /* Different types are always unequal. */
+    if (x->type != y->type) return 0;
+
+    /* Compare based upon type */
+    switch (x->type)
+    {
+        /* Compare Number value*/
+        case LVAL_NUM: return (x->num == y->num);
+
+        /* Compare String Values */
+        case LVAL_ERR: return STR_EQ(x->err, y->err);
+        case LVAL_SYM: return STR_EQ(x->sym, y->sym);
+
+        /* If builtin compare, otherwise compare formals and body */
+        case LVAL_FUN:
+            if (x->builtin || y->builtin)
+            {
+                return x->builtin == y->builtin;
+            }
+            else
+            {
+                return lval_eq(x->formals, y->formals) && lval_eq(x->body, y->body);
+            }
+        /* If list compare every individual element */
+        case LVAL_QEXPR:
+        case LVAL_SEXPR:
+            if (x->count != y->count) return 0;
+            for (int i = 0; i < x->count; i++)
+            {
+                /* If any element not equal then whole list not equal. */
+                if (!lval_eq(x->cell[i], y->cell[i])) return 0;
+            }
+            /* Otherwise lists must be equal. */
+            return 1;
+            break;
+    }
+    return 0;
+}
+
+lval *builtin_cmp(lenv *e, lval *a, char *func)
+{
+    LASSERT(a, a->count == 2, "Operator  %s passed wrong number of arguments. "
+        "Got %d, Expected %d", func, a->count, 2);
+
+    int r;
+    if (STR_EQ(func, "==")) r = lval_eq(a->cell[0], a->cell[1]);
+    if (STR_EQ(func, "!=")) r = !lval_eq(a->cell[0], a->cell[1]);
+    lval_del(a);
+    return lval_num(r);
+}
+
+lval *builtin_eq(lenv *e, lval *a)
+{
+    return builtin_cmp(e, a, "==");
+}
+
+lval *builtin_ne(lenv *e, lval *a)
+{
+    return builtin_cmp(e, a, "!=");
+}
+
+lval *builtin_if(lenv *e, lval *a)
+{
+    LASSERT(a, a->count == 3, "Function %s passed wrong number of arguments. "
+        "Got %d, Expected %d.", "if", a->count, 3);
+    LASSERT(a, a->cell[0]->type == LVAL_NUM, "Function %s passed invalid type at pos %d. "
+        "Got %d, Expected %d.", "if", 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
+    LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+        "Got %d, Expected %d.", "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
+    LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+        "Got %d, Expected %d.", "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
+
+    /* Mark both expressions as evaluable */
+    lval *x;
+    a->cell[1]->type = LVAL_SEXPR;
+    a->cell[2]->type = LVAL_SEXPR;
+
+    if (a->cell[0]->num)
+    {
+        /* If condition is true, evaluate first expression. */
+        x = lval_eval(e, lval_pop(a, 1));
+    }
+    else
+    {
+        /* Otherwise, evaluate second expression */
+        x = lval_eval(e, lval_pop(a, 2));
+    }
+
+    /* Delete argument list and return. */
+    lval_del(a);
+    return x;
+}
+
 void lenv_add_builtin(lenv *e, char *name, lbuiltin func)
 {
     lval *k = lval_sym(name);
@@ -510,6 +644,16 @@ void lenv_add_builtins(lenv *e)
     lenv_add_builtin(e, "=", builtin_put);
 
     lenv_add_builtin(e, "fun", builtin_fun);
+
+    /* Comparison Functions */
+    lenv_add_builtin(e, "if", builtin_if);
+    lenv_add_builtin(e, "==", builtin_eq);
+    lenv_add_builtin(e, "!=", builtin_ne);
+    lenv_add_builtin(e, ">",  builtin_gt);
+    lenv_add_builtin(e, "<",  builtin_lt);
+    lenv_add_builtin(e, ">=", builtin_ge);
+    lenv_add_builtin(e, "<=", builtin_le);
+
 }
 
 /********** Construct new lvals ****************/
