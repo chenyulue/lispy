@@ -495,9 +495,9 @@ lval *builtin_ord(lenv *e, lval *a, char *op)
     LASSERT(a, a->count == 2, "Operator %s passed too many arguments. "
         "Got %d, Expected %d.", op, a->count, 2);
     LASSERT(a, a->cell[0]->type == LVAL_NUM, "Operator %s passed invalid type at pos %d. "
-        "Got %d, Expected %d.", op, 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
+        "Got %s, Expected %s.", op, 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
     LASSERT(a, a->cell[1]->type == LVAL_NUM, "Operator %s passed invalid type at pos %d. "
-        "Got %d, Expected %d.", op, 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_NUM));
+        "Got %s, Expected %s.", op, 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_NUM));
 
     int r;
     if (STR_EQ(op, ">")) r = a->cell[0]->num > a->cell[1]->num;
@@ -577,11 +577,11 @@ lval *builtin_if(lenv *e, lval *a)
     LASSERT(a, a->count == 3, "Function %s passed wrong number of arguments. "
         "Got %d, Expected %d.", "if", a->count, 3);
     LASSERT(a, a->cell[0]->type == LVAL_NUM, "Function %s passed invalid type at pos %d. "
-        "Got %d, Expected %d.", "if", 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
+        "Got %s, Expected %s.", "if", 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_NUM));
     LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-        "Got %d, Expected %d.", "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
+        "Got %s, Expected %s.", "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
     LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-        "Got %d, Expected %d.", "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
+        "Got %s, Expected %s.", "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
 
     /* Mark both expressions as evaluable */
     lval *x;
