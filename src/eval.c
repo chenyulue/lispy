@@ -625,17 +625,17 @@ lval *builtin_if(lenv *e, lval *a)
     LASSERT(a, a->cell[0]->type == LVAL_BOOL, "Function %s passed invalid type at pos %d. "
                                               "Got %s, Expected %s.",
             "if", 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_BOOL));
-    LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-                                               "Got %s, Expected %s.",
-            "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
-    LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-                                               "Got %s, Expected %s.",
-            "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
+    // LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+    //                                            "Got %s, Expected %s.",
+    //         "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
+    // LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+    //                                            "Got %s, Expected %s.",
+    //         "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
 
     /* Mark both expressions as evaluable */
     lval *x;
-    a->cell[1]->type = LVAL_SEXPR;
-    a->cell[2]->type = LVAL_SEXPR;
+    // a->cell[1]->type = LVAL_SEXPR;
+    // a->cell[2]->type = LVAL_SEXPR;
 
     if (a->cell[0]->num)
     {
@@ -651,6 +651,134 @@ lval *builtin_if(lenv *e, lval *a)
     /* Delete argument list and return. */
     lval_del(a);
     return x;
+}
+
+lval *builtin_or(lenv *e, lval *a)
+{
+    LASSERT(a, a->count >= 2, "Operator '%s' expects %d or more arguments, "
+        "but got only %d.", "||", 2, a->count);
+
+    int i = 0;
+    while (a->count)
+    {
+        lval *x = lval_eval(e, lval_pop(a, 0));
+
+        /* Make sure the evaluated lval is of type LVAL_BOOL. */
+        if (x->type != LVAL_BOOL)
+        {
+            lval *err = lval_err("Operator '%s' passed argument of invalid type "
+                "at pos %d. Got %s, Expected %s.", 
+                "||", i, ltype_name(x->type), ltype_name(LVAL_BOOL));
+            lval_del(a);
+            lval_del(x);
+            return err;
+        }
+        
+        i++;
+        lval_del(x);
+        /* Short-circuit implementation of Or (||) */
+        if (x->num) 
+        {
+            lval_del(a);
+            return lval_bool(1);
+        }
+    }
+    lval_del(a);
+    return lval_bool(0);
+}
+
+lval *builtin_and(lenv *e, lval *a)
+{
+    LASSERT(a, a->count >= 2, "Operator '%s' expects %d or more arguments, "
+        "but got only %d.", "&&", 2, a->count);
+
+    int i = 0;
+    while (a->count)
+    {
+        lval *x = lval_eval(e, lval_pop(a, 0));
+
+        /* Make sure the evaluated lval is of type LVAL_BOOL. */
+        if (x->type != LVAL_BOOL)
+        {
+            lval *err = lval_err("Operator '%s' passed argument of invalid type "
+                "at pos %d. Got %s, Expected %s.", 
+                "&&", i, ltype_name(x->type), ltype_name(LVAL_BOOL));
+            lval_del(a);
+            lval_del(x);
+            return err;
+        }
+        
+        i++;
+        lval_del(x);
+        /* Short-circuit implementation of Or (||) */
+        if (x->num == 0) 
+        {
+            lval_del(a);
+            return lval_bool(0);
+        }
+    }
+    lval_del(a);
+    return lval_bool(1);   
+}
+
+lval *builtin_not(lenv *e, lval *a)
+{
+    LASSERT(a, a->count == 1, "Operator '%s' expects %d argument, "
+        "but got %d.", "!", 1, a->count);
+
+    lval *x = lval_eval(e, lval_pop(a, 0));
+
+    /* Make sure the evaluated lval is of type LVAL_BOOL. */
+    if (x->type != LVAL_BOOL)
+    {
+        lval *err = lval_err("Operator '%s' passed argument of invalid type "
+            "at pos %d. Got %s, Expected %s.", 
+            "!", 0, ltype_name(x->type), ltype_name(LVAL_BOOL));
+        lval_del(a);
+        lval_del(x);
+        return err;
+    }
+    int b = x->num;
+    lval_del(x);
+    lval_del(a);
+    return lval_bool(b - 1);    
+}
+
+lval *builtin_bool(lenv *e, lval *a)
+{
+    LASSERT(a, a->count == 1, "Function '%s' expects %d argument, "
+        "but got %d.", "bool", 1, a->count);
+    
+    lval *x = lval_eval(e, lval_pop(a, 0));
+
+    int b = 0;
+    switch (x->type)
+    {
+        case LVAL_BOOL:
+        case LVAL_ERR:
+        case LVAL_SYM:
+        /* If Bool or error or symbol value, return itself. */
+            return x;
+        case LVAL_NUM:
+        /* If Num value, return false if 0, otherwise true. */
+            b = x->num;
+            lval_del(x);
+            return b ? lval_bool(1) : lval_bool(0);
+        case LVAL_STR:
+        /* If String value, return false if "", otherwise true. */
+            b = STR_EQ(x->str, "");
+            lval_del(x);
+            return b ? lval_bool(0) : lval_bool(1);
+        case LVAL_QEXPR:
+        case LVAL_SEXPR:
+        /* If Q-Expression OR S-Expression, return false if empty, otherwise true. */
+            b = x->count;
+            lval_del(x);
+            return b ? lval_bool(1) : lval_bool(0);
+        case LVAL_FUN:
+        /* If Function value, return an error. */
+            return lval_err("Funtion cannot be converted into a bool value.");
+    }
 }
 
 lval *builtin_load(lenv *e, lval *a)
@@ -796,6 +924,12 @@ void lenv_add_builtins(lenv *e)
     lenv_add_builtin(e, "error", builtin_error);
     lenv_add_builtin(e, "print", builtin_print);
     lenv_add_builtin(e, "load", builtin_load);
+
+    /* Add logic operators */
+    lenv_add_builtin(e, "||", builtin_or);
+    lenv_add_builtin(e, "&&", builtin_and);
+    lenv_add_builtin(e, "!", builtin_not);
+    lenv_add_builtin(e, "bool", builtin_bool);
 }
 
 /********** Construct new lvals ****************/
