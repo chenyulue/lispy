@@ -2,6 +2,7 @@
 #define _LISPY_EVAL
 
 #include <string.h>
+#include <stdbool.h>
 #include "mpc.h"
 
 #define STR_EQ(X, Y) (strcmp((X), (Y)) == 0)
@@ -29,6 +30,8 @@ enum lval_type
     LVAL_ERR,
     LVAL_NUM,
     LVAL_SYM,
+    LVAL_STR,
+    LVAL_BOOL,
     LVAL_FUN,
     LVAL_SEXPR,
     LVAL_QEXPR,
@@ -50,16 +53,16 @@ struct lval
         /* Use string characters to store the error info and symbols. */
         char *err;
         char *sym;
+        char *str;
 
         /* Functions */
-        struct 
+        struct
         {
             lbuiltin builtin;
             lenv *env;
             lval *formals;
             lval *body;
         };
-        
 
         /* Count and pointer to a list of lval*/
         struct
@@ -94,7 +97,7 @@ lenv *lenv_copy(lenv *e);
 void lenv_def(lenv *e, lval *k, lval *v);
 char *lenv_find_fun(lenv *e, lbuiltin fun);
 /* Print out all the named values in an environment. */
-void builtin_print_env(lenv *e);
+lval *builtin_print_env(lenv *e, lval *a);
 
 /************ Evaluate the AST ******************/
 lval *lval_eval_sexpr(lenv *e, lval *v);
@@ -132,6 +135,10 @@ lval *builtin_ne(lenv *e, lval *a);
 
 lval *builtin_if(lenv *e, lval *a);
 
+lval *builtin_load(lenv *e, lval *a);
+lval *builtin_print(lenv *e, lval *a);
+lval *builtin_error(lenv *e, lval *a);
+
 void lenv_add_builtin(lenv *e, char *name, lbuiltin fun);
 void lenv_add_builtins(lenv *e);
 
@@ -152,6 +159,10 @@ lval *lval_fun(lbuiltin func);
 lval *lval_lambda(lval *formals, lval *body);
 /* Call a function */
 lval *lval_call(lenv *e, lval *f, lval *a);
+/* Create a string value */
+lval *lval_str(char *s);
+/* Create a bool value */
+lval *lval_bool(long x);
 /* Delete a lval to free the memory. */
 void lval_del(lval *v);
 
@@ -160,6 +171,7 @@ lval *lval_read_num(mpc_ast_t *t);
 lval *lval_read(mpc_ast_t *t);
 lval *lval_add(lval *v, lval *x);
 lval *lval_copy(lval *v);
+lval *lval_read_str(mpc_ast_t *t);
 
 /* Print the expression*/
 void lval_expr_print(lenv *e, lval *v, char open, char close);
@@ -168,9 +180,12 @@ void lval_print(lenv *e, lval *v);
 /* Print an lval value followed by a newline. */
 void lval_println(lenv *e, lval *v);
 
+/* Print a string */
+void lval_print_str(lval *v);
+
 /*********** Utilities *******************/
 char *ltype_name(enum lval_type t);
 
-void lispy_exit(int *flag);
+lval *lispy_exit(lenv *e, lval *a);
 
 #endif
