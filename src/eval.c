@@ -625,17 +625,17 @@ lval *builtin_if(lenv *e, lval *a)
     LASSERT(a, a->cell[0]->type == LVAL_BOOL, "Function %s passed invalid type at pos %d. "
                                               "Got %s, Expected %s.",
             "if", 0, ltype_name(a->cell[0]->type), ltype_name(LVAL_BOOL));
-    // LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-    //                                            "Got %s, Expected %s.",
-    //         "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
-    // LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
-    //                                            "Got %s, Expected %s.",
-    //         "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
+    LASSERT(a, a->cell[1]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+                                               "Got %s, Expected %s.",
+            "if", 1, ltype_name(a->cell[1]->type), ltype_name(LVAL_QEXPR));
+    LASSERT(a, a->cell[2]->type == LVAL_QEXPR, "Function %s passed invalid type at pos %d. "
+                                               "Got %s, Expected %s.",
+            "if", 2, ltype_name(a->cell[2]->type), ltype_name(LVAL_QEXPR));
 
     /* Mark both expressions as evaluable */
     lval *x;
-    // a->cell[1]->type = LVAL_SEXPR;
-    // a->cell[2]->type = LVAL_SEXPR;
+    a->cell[1]->type = LVAL_SEXPR;
+    a->cell[2]->type = LVAL_SEXPR;
 
     if (a->cell[0]->num)
     {
